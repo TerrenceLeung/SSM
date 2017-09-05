@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+
+
+
+<description>Shiro的配置文件，可以同时兼容使用cas与不使用cas的情况，只要在properties文件中配置好usecas变量即可</description>
+
+    <!--shiro的配置信息类-->
+    <bean class="core.shiro.ShiroManager"/>
+
+
+    <!-- Shiro生命周期处理器,保证实现了Shiro内部lifecycle函数的bean执行-->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+
+
+    <!--cas登录用的Filter-->
+    <bean id="casFilter" class="org.apache.shiro.cas.CasFilter">
+        <property name="failureUrl" value="${cas.login.url}"/>
+    </bean>
+
+
+    <!-- 缓存管理器 -->
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <property name="cacheManagerConfigFile" value="classpath:./shiro-ehcache.xml"/>
+    </bean>
+
+
+    <!--管理subject，防止chrome登录不上-->
+    <bean id="casSubjectFactory" class="org.apache.shiro.cas.CasSubjectFactory"/>
+
+
+
+
+    <!--cas的登录和权限校验-->
+    <bean id="casRealm" class="core.shiro.YCasRealm">
+        <property name="casServerUrlPrefix" value="${cas.server.url}"/><!-- cas server address-->
+        <property name="casService" value="${app.cas}"/><!-- cas client address-->
+        <property name="authenticationCacheName" value="authenticationCache"/>
+        <property name="authorizationCachingEnabled" value="true"/>
+        <property name="authorizationCacheName" value="authorizationCache"/>
+    </bean>
+
+
+
+
+    <!-- 会话ID生成器 -->
+    <bean id="sessionIdGenerator" class="org.apache.shiro.session.mgt.eis.JavaUuidSessionIdGenerator" />
+
+    <!-- 会话DAO -->
+    <bean id="sessionDAO" class="org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO">
+        <property name="activeSessionsCacheName" value="sessionCache" />
+        <property name="sessionIdGenerator" ref="sessionIdGenerator" />
+    </bean>
+
+    <!-- 会话Cookie模板 -->
+    <bean id="sessionIdCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+        <constructor-arg value="sid" />
+        <property name="httpOnly" value="true" />
+        <property name="maxAge" value="-1" />
+    </bean>
+
+    <!-- 会话管理器 -->
+    <bean id="sessionManager"  class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+        <property name="globalSessionTimeout" value="900000" />
+        <property name="deleteInvalidSessions" value="true" />
+        <property name="sessionDAO" ref="sessionDAO" />
+        <property name="sessionIdCookieEnabled" value="true" />
+        <property name="sessionIdCookie" ref="sessionIdCookie" />
+    </bean>
+
+
+
+
+
+
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"/>
+        <property name="loginUrl" value="${cas.login.url}"/><!-- cas的登录地址 -->
+        <property name="unauthorizedUrl" value="${cas.error.url}"/><!--认证失败地址 -->
+        <property name="successUrl" value="${app.index}"/><!-- 验证成功后跳转的地址 -->
+        <property name="filters">
+            <util:map>
+                <entry key="cas" value-ref="casFilter"/>
+            </util:map>
+        </property>
+        <property name="filterChainDefinitions">
+            <value>
+                /cas = cas
+                /casLogin.jsp = authc
+                /test.jsp = authc
+            </value>
+        </property>
+    </bean>
+
+</beans>
