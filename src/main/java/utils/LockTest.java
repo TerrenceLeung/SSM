@@ -12,7 +12,9 @@ public class LockTest {
 
     Lock lock = new ReentrantLock();
 
-
+    public Lock getLock() {
+        return lock;
+    }
 
     public void test(){
     }
